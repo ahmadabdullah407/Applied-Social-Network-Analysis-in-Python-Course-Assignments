@@ -1,0 +1,29 @@
+def new_connections_predictions():
+    
+    # Your Code Here
+    df=future_connections
+    df['common_neighbors'] = [len(list(nx.common_neighbors(G,e[0],e[1]))) for e in df.index]
+    df['jaccard_coefficient']=  [i[2] for i in nx.jaccard_coefficient(G, df.index)]
+    df['resource_allocation']= [i[2] for i in nx.resource_allocation_index(G, df.index)]
+    df['adamic_adar_index']=  [i[2] for i in nx.adamic_adar_index(G, df.index)]
+    df['preferential attachment'] = [i[2] for i in nx.preferential_attachment(G, df.index)]
+    df_train=df.dropna()
+    df_test=df[df['Future Connection'].isnull()]
+    features=['common_neighbors','jaccard_coefficient','resource_allocation','adamic_adar_index','preferential attachment']
+    X_train=df_train[features]
+    y_train=df_train['Future Connection']
+    X_test=df_test[features]
+    scaler = MinMaxScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_test_scaled = scaler.transform(X_test)
+    clf=MLPClassifier(random_state=0,verbose=0,solver='lbfgs').fit(X_train,y_train)
+    grid_values={'hidden_layer_sizes':[[10,5]],'alpha':[5]}
+    grid_clf_custom = GridSearchCV(clf, param_grid=grid_values, scoring='roc_auc')
+    grid_clf_custom.fit(X_train,y_train)
+    print('Grid best score ({0}): {1}'.format('roc_auc', grid_clf_custom.best_params_))
+    print('Grid best param ({0}): {1}'.format('roc_auc', grid_clf_custom.best_score_))
+    proba=grid_clf_custom.predict_proba(X_test)
+    probability=pd.Series(proba[:,1],index=X_test.index)
+    
+    return probability
+new_connections_predictions()
